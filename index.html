@@ -1,0 +1,169 @@
+<html><head><base href="https://websim.ai/"></head><body>Looking at the code, the download functionality is quite simple but could be improved. Here's how it currently works:
+
+1. There's a download section in the HTML:
+```html
+<div class="download-section">
+  <h2>📥 Download Project Files</h2>
+  <button id="downloadBtn" class="download-btn" 
+          onclick="window.open('https://example.com/projectfiles.zip','_blank');">
+    Download Project Files (.zip)
+  </button>
+</div>
+```
+
+2. The download section is hidden by default and only appears when:
+- The websocket is disconnected
+- The settings panel is opened
+
+3. The code includes the JSZip library but doesn't actually use it:
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+```
+
+4. The current download just tries to open a static URL (https://example.com/projectfiles.zip) which doesn't actually exist.
+
+Here's how we could improve it to actually generate and download a zip of the project files:
+
+```html
+<html>
+<head>
+<style>
+.download-section {
+  background: #2D2D3F;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.download-btn {
+  background: #9147FF;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.download-btn:hover {
+  background: #772CE8;
+}
+</style>
+</head>
+<body>
+
+<div class="download-section">
+  <h2>📥 Download Project Files</h2>
+  <button onclick="downloadProject()" class="download-btn">
+    Download Project Files (.zip)
+  </button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+<script>
+async function downloadProject() {
+  try {
+    // Create new ZIP file
+    const zip = new JSZip();
+
+    // Add HTML file
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Twitch Chat TTS Reader</title>
+    <meta charset="UTF-8">
+    ${document.head.innerHTML}
+</head>
+<body>
+    ${document.body.innerHTML}
+</body>
+</html>`;
+    zip.file("index.html", htmlContent);
+
+    // Add README
+    const readme = `# Twitch Chat TTS Reader
+
+This is a web-based Twitch chat reader with Text-to-Speech capability.
+
+## Setup
+1. Open index.html in your browser
+2. Enter your channel name
+3. Connect to your websocket server
+4. Enjoy!
+
+## Features
+- Text-to-Speech for chat messages
+- Adjustable voice settings
+- Configurable chat display
+- Auto-reconnect capability`;
+
+    zip.file("README.md", readme);
+
+    // Add package.json
+    const packageJson = {
+      "name": "twitch-chat-tts",
+      "version": "1.0.0",
+      "description": "Twitch Chat TTS Reader",
+      "main": "index.html",
+      "dependencies": {
+        "jszip": "^3.7.1"
+      }
+    };
+    
+    zip.file("package.json", JSON.stringify(packageJson, null, 2));
+
+    // Generate the zip file
+    const content = await zip.generateAsync({
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 9
+      }
+    });
+
+    // Create download link and trigger download
+    const url = window.URL.createObjectURL(content);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'twitch-chat-tts.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Error creating zip:', error);
+    alert('Error creating download. Please try again.');
+  }
+}
+
+// Show download section if websocket disconnects
+function onDisconnect() {
+  document.querySelector('.download-section').style.display = 'block';
+}
+</script>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+```
+
+This improved version:
+
+1. Uses JSZip to actually create a zip file dynamically
+2. Includes the current HTML, CSS and JavaScript in the download
+3. Adds a README.md and package.json
+4. Creates a proper downloadable blob
+5. Triggers the download automatically
+6. Has error handling
+7. Uses proper compression
+
+This provides a much more useful download functionality that gives users everything they need to run the project locally.
+
+The download will contain:
+- index.html with all the code
+- README.md with setup instructions
+- package.json for any npm dependencies
+- All currently used styles and scripts
+
+The ZIP is generated client-side using JSZip, so no server interaction is needed for the download.
